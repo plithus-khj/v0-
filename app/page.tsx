@@ -20,26 +20,33 @@ export default function Home() {
 
   // 전역 상태 설정 함수 노출
   if (typeof window !== "undefined") {
-    ;(window as any).setActiveTab = setActiveTab
+    ; (window as any).setActiveTab = setActiveTab
   }
 
   return (
     <main className="min-h-screen bg-gray-900 text-white">
       {/* 상단 네비게이션 바 */}
       <nav className="bg-gray-900 border-b border-gray-800 py-4">
-        <div className="max-w-5xl mx-auto px-4 flex justify-between items-center">
-          <div className="text-2xl font-bold text-white">Plithus</div>
-          <div className="text-xl font-medium">아르뷔엔의 겨울 테스트 개요</div>
+        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
+          <div>
+            <Image
+              src="/white-logo.svg"
+              alt="Plithus"
+              width={100}
+              height={29}
+            />
+          </div>
+          <div className="text-2xl font-medium font-bold">아르뷔엔의 겨울 테스트 개요</div>
           <PdfExportButton />
         </div>
       </nav>
 
       {/* 게임 정보 섹션 */}
       <div className="bg-gray-900 border-b border-gray-800 py-6">
-        <div className="max-w-5xl mx-auto px-4 flex items-center">
+        <div className="max-w-7xl mx-auto p-4 md:p-8 flex items-center">
           {/* 게임 이미지 */}
-          <div className="flex-shrink-0 mr-8">
-            <div className="w-32 h-32 rounded-md overflow-hidden">
+          <div className="flex-shrink-0 mr-20">
+            <div className="w-40 h-40 rounded-md overflow-hidden">
               <Image
                 src="/game-logo.png"
                 alt="아르뷔엔의 겨울"
@@ -51,7 +58,7 @@ export default function Home() {
           </div>
 
           {/* 게임 기본 정보 */}
-          <div className="flex-1 grid grid-cols-3 gap-6">
+          <div className="flex-1 grid grid-cols-3 gap-2">
             {/* 첫 번째 열 */}
             <div className="space-y-4">
               <div>
