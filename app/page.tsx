@@ -20,7 +20,7 @@ export default function Home() {
 
   // 전역 상태 설정 함수 노출
   if (typeof window !== "undefined") {
-    ; (window as any).setActiveTab = setActiveTab
+    ;(window as any).setActiveTab = setActiveTab
   }
 
   return (
@@ -29,12 +29,7 @@ export default function Home() {
       <nav className="bg-gray-900 border-b border-gray-800 py-4">
         <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
           <div>
-            <Image
-              src="/white-logo.svg"
-              alt="Plithus"
-              width={100}
-              height={29}
-            />
+            <Image src="/white-logo.svg" alt="Plithus" width={100} height={29} />
           </div>
           <div className="text-2xl font-medium font-bold">아르뷔엔의 겨울 테스트 개요</div>
           <PdfExportButton />

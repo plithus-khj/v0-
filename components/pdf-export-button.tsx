@@ -15,7 +15,9 @@ const PDF_CONTENT_PAGE_HORIZONTAL_MARGIN = 4 // 좌우 마진 (조정됨)
 export default function PdfExportButton() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
-  const [footerLogoDetails, setFooterLogoDetails] = useState<{ dataUrl: string, width: number, height: number } | null>(null)
+  const [footerLogoDetails, setFooterLogoDetails] = useState<{ dataUrl: string; width: number; height: number } | null>(
+    null,
+  )
 
   const generatePDF = async () => {
     if (!isRendered()) {
@@ -104,35 +106,31 @@ export default function PdfExportButton() {
           // START: Scale content below subtitle for "multiple-choice" tab (dynamic content)
           // 이 부분은 캡처될 원본 DOM의 크기를 줄이기 위해 유지합니다.
           if (tab.id === "multiple-choice") {
-            const hrElement = contentClone.querySelector('hr'); // Find the injected hr
+            const hrElement = contentClone.querySelector("hr") // Find the injected hr
             if (hrElement && hrElement.parentNode) {
-              const scaledContentWrapper = document.createElement("div");
-              scaledContentWrapper.style.transform = "scale(0.92)"; // 축소 비율 유지
-              scaledContentWrapper.style.transformOrigin = "top left";
+              const scaledContentWrapper = document.createElement("div")
+              scaledContentWrapper.style.transform = "scale(0.92)" // 축소 비율 유지
+              scaledContentWrapper.style.transformOrigin = "top left"
 
-              hrElement.parentNode.insertBefore(scaledContentWrapper, hrElement.nextSibling);
+              hrElement.parentNode.insertBefore(scaledContentWrapper, hrElement.nextSibling)
 
-              let elementToMove = scaledContentWrapper.nextSibling;
+              let elementToMove = scaledContentWrapper.nextSibling
               while (elementToMove) {
-                const nextElement = elementToMove.nextSibling;
-                scaledContentWrapper.appendChild(elementToMove);
-                elementToMove = nextElement;
+                const nextElement = elementToMove.nextSibling
+                scaledContentWrapper.appendChild(elementToMove)
+                elementToMove = nextElement
               }
             }
           }
           // START: Inject separator line below title/subtitle for dynamic content
-          const mainTitleElement = contentClone.querySelector('h1, h2, h3, h4, h5, h6')
+          const mainTitleElement = contentClone.querySelector("h1, h2, h3, h4, h5, h6")
           if (mainTitleElement && mainTitleElement instanceof HTMLElement) {
             let insertAfterElement: Element = mainTitleElement
             const subtitleElement = mainTitleElement.nextElementSibling
 
             // Heuristic: if the next element is a P, assume it's a subtitle or intro paragraph
             // and place the line after it. Otherwise, place it directly after the title.
-            if (
-              subtitleElement &&
-              subtitleElement.tagName === "P" &&
-              subtitleElement instanceof HTMLElement
-            ) {
+            if (subtitleElement && subtitleElement.tagName === "P" && subtitleElement instanceof HTMLElement) {
               // 1. Reduce space between main title and subtitle
               mainTitleElement.style.marginBottom = "10px"
               subtitleElement.style.marginTop = "0px" // Adjust as needed
@@ -414,58 +412,59 @@ export default function PdfExportButton() {
   }
 
   // SVG 텍스트를 PNG Base64 데이터 URL로 변환하는 함수
-  const getBase64ImageFromSvgText = (svgText: string): Promise<{ dataUrl: string, width: number, height: number } | null> => {
+  const getBase64ImageFromSvgText = (
+    svgText: string,
+  ): Promise<{ dataUrl: string; width: number; height: number } | null> => {
     return new Promise((resolve) => {
-      const img = new Image();
+      const img = new Image()
       img.onload = () => {
         try {
-          const canvas = document.createElement("canvas");
-          canvas.width = img.naturalWidth; // SVG의 고유 너비 사용
-          canvas.height = img.naturalHeight; // SVG의 고유 높이 사용
-          const ctx = canvas.getContext("2d");
+          const canvas = document.createElement("canvas")
+          canvas.width = img.naturalWidth // SVG의 고유 너비 사용
+          canvas.height = img.naturalHeight // SVG의 고유 높이 사용
+          const ctx = canvas.getContext("2d")
           if (ctx) {
-            ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
-            const dataURL = canvas.toDataURL("image/png");
-            resolve({ dataUrl: dataURL, width: img.naturalWidth, height: img.naturalHeight });
+            ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight)
+            const dataURL = canvas.toDataURL("image/png")
+            resolve({ dataUrl: dataURL, width: img.naturalWidth, height: img.naturalHeight })
           } else {
-            console.error("Canvas context is null for SVG conversion");
-            resolve(null);
+            console.error("Canvas context is null for SVG conversion")
+            resolve(null)
           }
         } catch (error) {
-          console.error("Error converting SVG to base64 PNG:", error);
-          resolve(null);
+          console.error("Error converting SVG to base64 PNG:", error)
+          resolve(null)
         }
-      };
+      }
       img.onerror = (e) => {
-        console.error("Error loading SVG into Image element:", e);
-        resolve(null);
-      };
+        console.error("Error loading SVG into Image element:", e)
+        resolve(null)
+      }
       // SVG를 Image 객체의 src로 사용하기 위해 data URL 형식으로 만듭니다.
-      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText);
-    });
-  };
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText)
+    })
+  }
 
-  const drawHeaderFooter = (pdf: jsPDF, logoDetails: { dataUrl: string, width: number, height: number } | null) => {
+  const drawHeaderFooter = (pdf: jsPDF, logoDetails: { dataUrl: string; width: number; height: number } | null) => {
     const pageWidth = pdf.internal.pageSize.getWidth()
     const pageHeight = pdf.internal.pageSize.getHeight()
 
     // 하단 구분선
     pdf.setDrawColor(255, 255, 255) // Set color to white for the bottom line
-    pdf.setLineWidth(0.15)         // 상단 구분선(0.5px)과 유사한 두께로 변경 (0.5mm -> 0.15mm)
+    pdf.setLineWidth(0.15) // 상단 구분선(0.5px)과 유사한 두께로 변경 (0.5mm -> 0.15mm)
     pdf.line(10, pageHeight - 20, pageWidth - 10, pageHeight - 20)
-
 
     // 로고 추가 (중앙 정렬)
     if (logoDetails && logoDetails.dataUrl) {
       try {
-        const desiredLogoWidthMM = 21; // 표지 로고의 80px에 해당하는 너비 (약 21mm)
-        const aspectRatio = logoDetails.height / logoDetails.width;
-        const logoHeightMM = desiredLogoWidthMM * aspectRatio;
+        const desiredLogoWidthMM = 21 // 표지 로고의 80px에 해당하는 너비 (약 21mm)
+        const aspectRatio = logoDetails.height / logoDetails.width
+        const logoHeightMM = desiredLogoWidthMM * aspectRatio
 
-        const x = (pageWidth - desiredLogoWidthMM) / 2;
+        const x = (pageWidth - desiredLogoWidthMM) / 2
         // const y = pageHeight - 18 // 이전: 구분선 바로 아래 위치
         // 새 위치: 구분선(pageHeight - 20)과 페이지 하단(pageHeight) 사이의 중앙에 로고의 중심이 오도록 설정
-        const y = (pageHeight - 10) - (logoHeightMM / 2);
+        const y = pageHeight - 10 - logoHeightMM / 2
         pdf.addImage(logoDetails.dataUrl, "PNG", x, y, desiredLogoWidthMM, logoHeightMM)
         console.log("푸터 로고가 성공적으로 추가되었습니다.")
       } catch (error) {
@@ -523,7 +522,7 @@ export default function PdfExportButton() {
   const captureAndAddToPDF = async (
     pdf: jsPDF,
     element: HTMLElement,
-    logoDetails: { dataUrl: string, width: number, height: number } | null,
+    logoDetails: { dataUrl: string; width: number; height: number } | null,
     tabId: string, // 현재 탭 ID를 받도록 추가
   ) => {
     const pageContentHeight =
@@ -574,27 +573,20 @@ export default function PdfExportButton() {
     if (tabId === "multiple-choice") {
       // "multiple-choice" 탭은 한 페이지에 강제로 맞춤 (비율 유지)
       console.log(`Forcing single page for dynamic content: ${tabId}`)
-      const aspectRatio = canvasImgHeight / canvasImgWidth;
-      let finalRenderWidth = renderWidthOnPdf;
-      let finalRenderHeight = finalRenderWidth * aspectRatio;
+      const aspectRatio = canvasImgHeight / canvasImgWidth
+      let finalRenderWidth = renderWidthOnPdf
+      let finalRenderHeight = finalRenderWidth * aspectRatio
 
       if (finalRenderHeight > pageContentHeight) {
-        finalRenderHeight = pageContentHeight;
-        finalRenderWidth = finalRenderHeight / aspectRatio;
+        finalRenderHeight = pageContentHeight
+        finalRenderWidth = finalRenderHeight / aspectRatio
       }
 
       // 중앙 정렬을 위해 x_offset 계산
-      const x_offset = PDF_CONTENT_PAGE_HORIZONTAL_MARGIN + (renderWidthOnPdf - finalRenderWidth) / 2;
-      const y_offset = PDF_CONTENT_PAGE_TOP_MARGIN; // 상단 마진만 적용
+      const x_offset = PDF_CONTENT_PAGE_HORIZONTAL_MARGIN + (renderWidthOnPdf - finalRenderWidth) / 2
+      const y_offset = PDF_CONTENT_PAGE_TOP_MARGIN // 상단 마진만 적용
 
-      pdf.addImage(
-        imgData,
-        "JPEG",
-        x_offset,
-        y_offset,
-        finalRenderWidth,
-        finalRenderHeight
-      );
+      pdf.addImage(imgData, "JPEG", x_offset, y_offset, finalRenderWidth, finalRenderHeight)
     } else {
       // 다른 탭들은 기존 페이징 로직 사용
       const totalRenderHeightOnPdf = (canvasImgHeight / canvasImgWidth) * renderWidthOnPdf
@@ -623,8 +615,15 @@ export default function PdfExportButton() {
         segmentCanvas.height = currentCanvasSliceHeight
 
         segmentCtx.drawImage(
-          canvas, 0, canvasYSrc, canvasImgWidth, currentCanvasSliceHeight,
-          0, 0, canvasImgWidth, currentCanvasSliceHeight
+          canvas,
+          0,
+          canvasYSrc,
+          canvasImgWidth,
+          currentCanvasSliceHeight,
+          0,
+          0,
+          canvasImgWidth,
+          currentCanvasSliceHeight,
         )
 
         const segmentImgData = segmentCanvas.toDataURL("image/jpeg", 1.0)
@@ -651,7 +650,7 @@ export default function PdfExportButton() {
     pdf: jsPDF,
     tabId: string,
     title: string,
-    logoDetails: { dataUrl: string, width: number, height: number } | null,
+    logoDetails: { dataUrl: string; width: number; height: number } | null,
   ) => {
     const pageContentHeight =
       pdf.internal.pageSize.getHeight() - PDF_CONTENT_PAGE_TOP_MARGIN - PDF_CONTENT_PAGE_BOTTOM_MARGIN
@@ -694,17 +693,17 @@ export default function PdfExportButton() {
       if (tabId === "multiple-choice") {
         // "multiple-choice" 탭은 한 페이지에 강제로 맞춤 (비율 유지)
         console.log(`Forcing single page for static content: ${tabId}`)
-        const aspectRatio = canvasImgHeight / canvasImgWidth;
-        let finalRenderWidth = renderWidthOnPdf;
-        let finalRenderHeight = finalRenderWidth * aspectRatio;
+        const aspectRatio = canvasImgHeight / canvasImgWidth
+        let finalRenderWidth = renderWidthOnPdf
+        let finalRenderHeight = finalRenderWidth * aspectRatio
 
         if (finalRenderHeight > pageContentHeight) {
-          finalRenderHeight = pageContentHeight;
-          finalRenderWidth = finalRenderHeight / aspectRatio;
+          finalRenderHeight = pageContentHeight
+          finalRenderWidth = finalRenderHeight / aspectRatio
         }
 
-        const x_offset = PDF_CONTENT_PAGE_HORIZONTAL_MARGIN + (renderWidthOnPdf - finalRenderWidth) / 2;
-        const y_offset = PDF_CONTENT_PAGE_TOP_MARGIN;
+        const x_offset = PDF_CONTENT_PAGE_HORIZONTAL_MARGIN + (renderWidthOnPdf - finalRenderWidth) / 2
+        const y_offset = PDF_CONTENT_PAGE_TOP_MARGIN
 
         pdf.addImage(
           fullStaticCanvas.toDataURL("image/jpeg", 0.95), // 전체 캔버스 사용
@@ -712,8 +711,8 @@ export default function PdfExportButton() {
           x_offset,
           y_offset,
           finalRenderWidth,
-          finalRenderHeight
-        );
+          finalRenderHeight,
+        )
       } else {
         // 다른 탭들은 기존 페이징 로직 사용
         const totalRenderHeightOnPdf = (canvasImgHeight / canvasImgWidth) * renderWidthOnPdf
@@ -742,17 +741,27 @@ export default function PdfExportButton() {
           segmentCanvas.height = currentCanvasSliceHeight
 
           segmentCtx.drawImage(
-            fullStaticCanvas, 0, canvasYSrc, canvasImgWidth, currentCanvasSliceHeight,
-            0, 0, canvasImgWidth, currentCanvasSliceHeight
+            fullStaticCanvas,
+            0,
+            canvasYSrc,
+            canvasImgWidth,
+            currentCanvasSliceHeight,
+            0,
+            0,
+            canvasImgWidth,
+            currentCanvasSliceHeight,
           )
 
           const segmentImgData = segmentCanvas.toDataURL("image/jpeg", 0.95)
           const segmentHeightOnPdf = currentCanvasSliceHeight * (totalRenderHeightOnPdf / canvasImgHeight)
 
           pdf.addImage(
-            segmentImgData, "JPEG",
-            PDF_CONTENT_PAGE_HORIZONTAL_MARGIN, PDF_CONTENT_PAGE_TOP_MARGIN,
-            renderWidthOnPdf, segmentHeightOnPdf
+            segmentImgData,
+            "JPEG",
+            PDF_CONTENT_PAGE_HORIZONTAL_MARGIN,
+            PDF_CONTENT_PAGE_TOP_MARGIN,
+            renderWidthOnPdf,
+            segmentHeightOnPdf,
           )
 
           remainingCanvasHeightToProcess -= currentCanvasSliceHeight
