@@ -968,7 +968,7 @@ export default function PdfExportButton() {
               <div style="margin-top: 15px;">
                 <h4 style="color: #ffd43b; margin-bottom: 5px;">🧭 UX 불편 (2건)</h4>
                 <p style="margin-left: 15px; margin-bottom: 5px;">- 사례: 힌트/경고창이 ESC로만 닫히는 구조, 조작 흐름 단절</p>
-                <p style="margin-left: 15px;">- 개선방안: 인터페이스 내 직관적 조작 지원 (X버튼 등 추가) → ✅ 즉시 개선 가능</p>
+                <p style="margin-left: 15px;">- 개선방안: 인��페이스 내 직관적 조작 지원 (X버튼 등 추가) → ✅ 즉시 개선 가능</p>
               </div>
             </div>
           </div>
