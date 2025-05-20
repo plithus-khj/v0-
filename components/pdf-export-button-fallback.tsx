@@ -79,7 +79,7 @@ export default function PdfExportButtonFallback() {
 
     coverDiv.innerHTML = `
       <div style="padding: 40px; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center;">
-<img src="/game-logo.png" alt="로고" style="width: 256px; height: 256px; object-fit: cover; border-radius: 8px; margin-bottom: 30px;" />
+<img src="/game-cover.png" alt="로고" style="width: 256px; height: 256px; object-fit: cover; border-radius: 8px; margin-bottom: 30px;" />
         <h1 style="font-size: 30px; margin-bottom: 20px;">아르뷔엔의 겨울</h1>
         <h2 style="font-size: 24px; margin-bottom: 40px;">테스트 피드백 분석 리포트</h2>
         <div style="margin-top: 40px;">

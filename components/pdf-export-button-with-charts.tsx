@@ -170,7 +170,7 @@ export default function PdfExportButtonWithCharts() {
     const footer = document.createElement("div")
     footer.style.marginTop = "auto"
     footer.style.fontSize = "12px"
-    footer.textContent = "© 2025 오르투스게임즈"
+    footer.textContent = "© 2025 플리더스"
     coverDiv.appendChild(footer)
 
     // DOM에 추가

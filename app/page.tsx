@@ -48,7 +48,7 @@ export default function Home() {
           <div className="flex-shrink-0 mr-20">
             <div className="w-40 h-40 rounded-md overflow-hidden">
               <Image
-                src="/game-logo.png"
+                src="/game-cover.png"
                 alt="아르뷔엔의 겨울"
                 width={128}
                 height={128}

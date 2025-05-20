@@ -7,9 +7,15 @@ import jsPDF from "jspdf"
 import html2canvas from "html2canvas"
 import { isRendered } from "@/lib/global-temp"
 
+// PDF 페이지 레이아웃 상수 (mm 단위)
+const PDF_CONTENT_PAGE_TOP_MARGIN = 2 // 콘텐츠 시작 상단 마진 (조정됨)
+const PDF_CONTENT_PAGE_BOTTOM_MARGIN = 25 // 푸터 및 하단 여백을 위한 마진
+const PDF_CONTENT_PAGE_HORIZONTAL_MARGIN = 4 // 좌우 마진 (조정됨)
+
 export default function PdfExportButton() {
   const [isGenerating, setIsGenerating] = useState(false)
   const [progress, setProgress] = useState(0)
+  const [footerLogoDetails, setFooterLogoDetails] = useState<{ dataUrl: string, width: number, height: number } | null>(null)
 
   const generatePDF = async () => {
     if (!isRendered()) {
@@ -22,7 +28,28 @@ export default function PdfExportButton() {
 
     try {
       console.log("Starting PDF generation...")
+      // const logoDataUrl = await getBase64Image("/white_logo.png") // 이전 로고 로딩
+      // if (!logoDataUrl) {
+      //   console.error("로고 이미지를 불러올 수 없습니다.")
+      //   return
+      // }
+      // setWhiteLogoDataUrl(logoDataUrl) // 이전 로고 상태 설정
 
+      const logoSvgText = await getSvgContent("/white-logo.svg") // 표지 로고와 동일한 SVG 로드
+      if (!logoSvgText) {
+        console.error("푸터 로고 SVG를 불러올 수 없습니다.")
+        setIsGenerating(false)
+        alert("PDF 생성에 필요한 로고 파일을 불러오지 못했습니다.")
+        return
+      }
+      const convertedLogo = await getBase64ImageFromSvgText(logoSvgText)
+      if (!convertedLogo) {
+        console.error("푸터 로고 SVG를 이미지로 변환할 수 없습니다.")
+        setIsGenerating(false)
+        alert("PDF 생성에 필요한 로고 파일을 처리하지 못했습니다.")
+        return
+      }
+      setFooterLogoDetails(convertedLogo)
       // Create PDF
       const pdf = new jsPDF({
         orientation: "p",
@@ -36,7 +63,6 @@ export default function PdfExportButton() {
 
       // 표지 페이지 생성 (이미지 기반 방식으로 변경)
       await generateCoverPage(pdf, pageWidth, pageHeight)
-
       setProgress(10) // 표지 생성 완료
 
       // Define tabs to include in PDF (excluding the 8th tab - feedback viewer)
@@ -58,11 +84,11 @@ export default function PdfExportButton() {
         const tab = tabIds[i]
         console.log(`Preparing offscreen content for tab: ${tab.id}`)
 
-        // 오프스크린 컨텐츠 찾기
+        // 오프스크린 콘텐츠 찾기
         const offscreenContent = document.querySelector(`#offscreen-${tab.id}`) as HTMLElement | null
 
         if (offscreenContent) {
-          console.log(`Found offscreen content for tab: ${tab.id}`)
+          console.log(`Found offscreen content for tab: ${tab.id}, title: ${tab.title}`)
 
           // 컨텐츠 복제 및 스타일 조정
           const contentClone = offscreenContent.cloneNode(true) as HTMLElement
@@ -74,6 +100,57 @@ export default function PdfExportButton() {
           contentClone.style.visibility = "visible"
           contentClone.style.position = "static"
           contentClone.style.opacity = "1"
+
+          // START: Scale content below subtitle for "multiple-choice" tab (dynamic content)
+          // 이 부분은 캡처될 원본 DOM의 크기를 줄이기 위해 유지합니다.
+          if (tab.id === "multiple-choice") {
+            const hrElement = contentClone.querySelector('hr'); // Find the injected hr
+            if (hrElement && hrElement.parentNode) {
+              const scaledContentWrapper = document.createElement("div");
+              scaledContentWrapper.style.transform = "scale(0.92)"; // 축소 비율 유지
+              scaledContentWrapper.style.transformOrigin = "top left";
+
+              hrElement.parentNode.insertBefore(scaledContentWrapper, hrElement.nextSibling);
+
+              let elementToMove = scaledContentWrapper.nextSibling;
+              while (elementToMove) {
+                const nextElement = elementToMove.nextSibling;
+                scaledContentWrapper.appendChild(elementToMove);
+                elementToMove = nextElement;
+              }
+            }
+          }
+          // START: Inject separator line below title/subtitle for dynamic content
+          const mainTitleElement = contentClone.querySelector('h1, h2, h3, h4, h5, h6')
+          if (mainTitleElement && mainTitleElement instanceof HTMLElement) {
+            let insertAfterElement: Element = mainTitleElement
+            const subtitleElement = mainTitleElement.nextElementSibling
+
+            // Heuristic: if the next element is a P, assume it's a subtitle or intro paragraph
+            // and place the line after it. Otherwise, place it directly after the title.
+            if (
+              subtitleElement &&
+              subtitleElement.tagName === "P" &&
+              subtitleElement instanceof HTMLElement
+            ) {
+              // 1. Reduce space between main title and subtitle
+              mainTitleElement.style.marginBottom = "10px"
+              subtitleElement.style.marginTop = "0px" // Adjust as needed
+
+              insertAfterElement = subtitleElement
+            }
+
+            const hr = document.createElement("hr")
+            hr.style.border = "none"
+            hr.style.borderTop = "0.5px solid white" // Thin white line
+            // 2. Increase space between subtitle (or title) and separator line
+            hr.style.marginTop = "24px" // Increased from '16px', adjust as needed
+            hr.style.marginBottom = "20px" // Space below the line, before main content (can be adjusted if needed)
+
+            // Insert hr after the determined element (title or title + subtitle paragraph)
+            insertAfterElement.parentNode?.insertBefore(hr, insertAfterElement.nextSibling)
+          }
+          // END: Inject separator line
 
           // 차트 요소 스타일 조정
           const charts = contentClone.querySelectorAll(".recharts-wrapper")
@@ -118,20 +195,22 @@ export default function PdfExportButton() {
         try {
           // Create section title page
           pdf.addPage()
-          applyPageBackground(pdf) // 배경색 적용
+          applyPageBackground(pdf)
+          drawHeaderFooter(pdf, convertedLogo) // 변경된 로고 정보 전달
           await generateSectionTitle(pdf, pageWidth, pageHeight, item.tab.title)
 
           // Create content page
           pdf.addPage()
-          applyPageBackground(pdf) // 배경색 적용
+          applyPageBackground(pdf)
+          drawHeaderFooter(pdf, convertedLogo) // 변경된 로고 정보 전달
 
           // 컨텐츠 캡처 및 PDF에 추가
           if (item.isStatic) {
             console.log(`Adding static content for tab: ${item.tab.id}`)
-            await captureAndAddToPDF(pdf, item.content)
+            await generateStaticTabContent(pdf, item.tab.id, item.tab.title, convertedLogo)
           } else {
             console.log(`Capturing and adding content for tab: ${item.tab.id}`)
-            await captureAndAddToPDF(pdf, item.content)
+            await captureAndAddToPDF(pdf, item.content, convertedLogo, item.tab.id)
           }
 
           // 진행 상태 업데이트 (80% 컨텐츠 준비 + 20% PDF 생성)
@@ -141,11 +220,13 @@ export default function PdfExportButton() {
 
           // 오류 발생 시 정적 내용으로 대체
           pdf.addPage()
-          applyPageBackground(pdf) // 배경색 적용
+          applyPageBackground(pdf)
+          drawHeaderFooter(pdf, convertedLogo) // 변경된 로고 정보 전달
           await generateSectionTitle(pdf, pageWidth, pageHeight, item.tab.title)
           pdf.addPage()
-          applyPageBackground(pdf) // 배경색 적용
-          await generateStaticTabContent(pdf, item.tab.id, item.tab.title)
+          applyPageBackground(pdf)
+          drawHeaderFooter(pdf, convertedLogo) // 변경된 로고 정보 전달
+          await generateStaticTabContent(pdf, item.tab.id, item.tab.title, convertedLogo)
         }
       }
 
@@ -161,7 +242,21 @@ export default function PdfExportButton() {
     }
   }
 
-  // 표지 페이지 생성 (이미지 기반 방식)
+  // SVG 파일 내용을 텍스트로 가져오는 함수
+  const getSvgContent = async (svgUrl: string): Promise<string | null> => {
+    try {
+      const response = await fetch(svgUrl)
+      if (!response.ok) {
+        console.error(`SVG 로드 오류: ${response.status} ${response.statusText}`)
+        return null
+      }
+      return await response.text()
+    } catch (error) {
+      console.error("SVG 내용을 가져오는 중 오류 발생:", error)
+      return null
+    }
+  }
+
   const generateCoverPage = async (pdf: jsPDF, pageWidth: number, pageHeight: number) => {
     // 배경색 적용
     pdf.setFillColor(31, 41, 55) // 웹사이트 배경색
@@ -186,51 +281,73 @@ export default function PdfExportButton() {
     coverDiv.style.boxSizing = "border-box"
     coverDiv.style.textAlign = "center"
 
-    // 게임 이미지 추가
+    // 내용을 감싸는 래퍼 추가 (이미지와 텍스트를 그룹화하여 중앙 정렬)
+    const contentWrapper = document.createElement("div")
+    contentWrapper.style.display = "flex"
+    contentWrapper.style.flexDirection = "column"
+    contentWrapper.style.alignItems = "center" // 내부 요소들 가로 중앙 정렬
+    // contentWrapper는 coverDiv의 justify-content: center에 의해 세로 중앙 정렬됨
+
+    // 게임 이미지 컨테이너
     const imgContainer = document.createElement("div")
     imgContainer.style.width = "80%"
-    imgContainer.style.maxWidth = "400px"
-    imgContainer.style.marginBottom = "40px"
+    imgContainer.style.maxWidth = "300px" // 이미지 최대 너비 줄임
+    imgContainer.style.marginTop = "300px" // 이미지 상단 여백 추가
+    imgContainer.style.marginBottom = "30px" // 이미지와 제목 사이 간격
 
+    // 게임 이미지
     const img = document.createElement("img")
     img.src = "/game-cover.png"
     img.style.width = "100%"
     img.style.height = "auto"
     img.style.objectFit = "contain"
-
     imgContainer.appendChild(img)
-    coverDiv.appendChild(imgContainer)
+    contentWrapper.appendChild(imgContainer) // 래퍼에 추가
 
     // 제목 추가
     const title = document.createElement("h1")
-    title.textContent = "테스트 피드백 분석 리포트"
+    title.innerHTML = "아르뷔엔의 겨울<br>테스트 리포트"
     title.style.fontSize = "28px"
-    title.style.marginBottom = "20px"
+    title.style.marginBottom = "15px" // 제목과 게임 정보 사이 간격
     title.style.fontWeight = "bold"
-    coverDiv.appendChild(title)
+    contentWrapper.appendChild(title) // 래퍼에 추가
 
     // 게임 정보 추가
     const gameInfo = document.createElement("div")
-    gameInfo.style.marginTop = "40px"
+    // gameInfo.style.marginTop = "40px"; // 제목의 marginBottom으로 간격 조절
 
     const gameName = document.createElement("p")
-    gameName.textContent = "게임이름: 아르뷔엔의 겨울"
+    gameName.textContent = "오르투스게임즈"
     gameName.style.fontSize = "16px"
-    gameName.style.marginBottom = "10px"
+    gameName.style.marginBottom = "8px" // 게임 이름과 테스터 수 사이 간격
     gameInfo.appendChild(gameName)
 
-    const testerCount = document.createElement("p")
-    testerCount.textContent = "테스터 수: 80명"
-    testerCount.style.fontSize = "16px"
-    gameInfo.appendChild(testerCount)
+    contentWrapper.appendChild(gameInfo) // 래퍼에 추가
 
-    coverDiv.appendChild(gameInfo)
+    // contentWrapper를 coverDiv에 추가
+    coverDiv.appendChild(contentWrapper)
 
     // 푸터 추가
     const footer = document.createElement("div")
     footer.style.marginTop = "auto"
-    footer.style.fontSize = "12px"
-    footer.textContent = "© 2025 플리더스"
+    footer.style.width = "100%" // 푸터가 전체 너비를 차지하도록 설정
+    footer.style.display = "flex" // Flexbox를 사용하여 자식 요소 정렬
+    footer.style.justifyContent = "center" // 자식 요소를 가로 중앙에 정렬
+    footer.style.paddingBottom = "30px" // 하단 여백 추가 (페이지 하단과의 간격)
+
+    const logoSvgText = await getSvgContent("/white-logo.svg")
+    if (logoSvgText) {
+      footer.innerHTML = logoSvgText
+      const svgElement = footer.querySelector("svg")
+      if (svgElement) {
+        svgElement.style.width = "80px" // 로고 너비 설정 (원하는 크기로 조절)
+        svgElement.style.height = "auto" // 높이 자동 조절로 비율 유지
+      }
+    } else {
+      // 로고 로드 실패 시 대체 텍스트 (선택 사항)
+      // footer.textContent = "Plithus"
+      // footer.style.fontSize = "12px"
+    }
     coverDiv.appendChild(footer)
 
     // DOM에 추가
@@ -296,6 +413,69 @@ export default function PdfExportButton() {
     })
   }
 
+  // SVG 텍스트를 PNG Base64 데이터 URL로 변환하는 함수
+  const getBase64ImageFromSvgText = (svgText: string): Promise<{ dataUrl: string, width: number, height: number } | null> => {
+    return new Promise((resolve) => {
+      const img = new Image();
+      img.onload = () => {
+        try {
+          const canvas = document.createElement("canvas");
+          canvas.width = img.naturalWidth; // SVG의 고유 너비 사용
+          canvas.height = img.naturalHeight; // SVG의 고유 높이 사용
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, img.naturalWidth, img.naturalHeight);
+            const dataURL = canvas.toDataURL("image/png");
+            resolve({ dataUrl: dataURL, width: img.naturalWidth, height: img.naturalHeight });
+          } else {
+            console.error("Canvas context is null for SVG conversion");
+            resolve(null);
+          }
+        } catch (error) {
+          console.error("Error converting SVG to base64 PNG:", error);
+          resolve(null);
+        }
+      };
+      img.onerror = (e) => {
+        console.error("Error loading SVG into Image element:", e);
+        resolve(null);
+      };
+      // SVG를 Image 객체의 src로 사용하기 위해 data URL 형식으로 만듭니다.
+      img.src = "data:image/svg+xml;charset=utf-8," + encodeURIComponent(svgText);
+    });
+  };
+
+  const drawHeaderFooter = (pdf: jsPDF, logoDetails: { dataUrl: string, width: number, height: number } | null) => {
+    const pageWidth = pdf.internal.pageSize.getWidth()
+    const pageHeight = pdf.internal.pageSize.getHeight()
+
+    // 하단 구분선
+    pdf.setDrawColor(255, 255, 255) // Set color to white for the bottom line
+    pdf.setLineWidth(0.15)         // 상단 구분선(0.5px)과 유사한 두께로 변경 (0.5mm -> 0.15mm)
+    pdf.line(10, pageHeight - 20, pageWidth - 10, pageHeight - 20)
+
+
+    // 로고 추가 (중앙 정렬)
+    if (logoDetails && logoDetails.dataUrl) {
+      try {
+        const desiredLogoWidthMM = 21; // 표지 로고의 80px에 해당하는 너비 (약 21mm)
+        const aspectRatio = logoDetails.height / logoDetails.width;
+        const logoHeightMM = desiredLogoWidthMM * aspectRatio;
+
+        const x = (pageWidth - desiredLogoWidthMM) / 2;
+        // const y = pageHeight - 18 // 이전: 구분선 바로 아래 위치
+        // 새 위치: 구분선(pageHeight - 20)과 페이지 하단(pageHeight) 사이의 중앙에 로고의 중심이 오도록 설정
+        const y = (pageHeight - 10) - (logoHeightMM / 2);
+        pdf.addImage(logoDetails.dataUrl, "PNG", x, y, desiredLogoWidthMM, logoHeightMM)
+        console.log("푸터 로고가 성공적으로 추가되었습니다.")
+      } catch (error) {
+        console.error("푸터 로고 추가 중 오류 발생:", error)
+      }
+    } else {
+      console.warn("푸터 로고 데이터가 없습니다.")
+    }
+  }
+
   // 페이지 배경색 적용 함수
   const applyPageBackground = (pdf: jsPDF) => {
     const pageWidth = pdf.internal.pageSize.getWidth()
@@ -340,84 +520,145 @@ export default function PdfExportButton() {
     }
   }
 
-  // Capture content and add to PDF
-  const captureAndAddToPDF = async (pdf: jsPDF, contentElement: HTMLElement) => {
-    // 컨테이너 생성 및 DOM에 추가
+  const captureAndAddToPDF = async (
+    pdf: jsPDF,
+    element: HTMLElement,
+    logoDetails: { dataUrl: string, width: number, height: number } | null,
+    tabId: string, // 현재 탭 ID를 받도록 추가
+  ) => {
+    const pageContentHeight =
+      pdf.internal.pageSize.getHeight() - PDF_CONTENT_PAGE_TOP_MARGIN - PDF_CONTENT_PAGE_BOTTOM_MARGIN
+    // 임시 DOM에 렌더링
     const container = document.createElement("div")
     container.style.position = "fixed"
     container.style.top = "-9999px"
     container.style.left = "-9999px"
     container.style.zIndex = "-1000"
-    container.appendChild(contentElement)
+    container.style.background = "rgb(31, 41, 55)"
+    container.style.padding = "0"
+    container.style.margin = "0"
+    container.style.width = "794px" // A4
+    container.style.minHeight = "1123px"
+    container.style.boxSizing = "border-box"
+    container.style.overflow = "visible"
+
+    container.appendChild(element)
     document.body.appendChild(container)
 
-    try {
-      // 렌더링 완료를 위한 대기
-      console.log(`Waiting for content to stabilize before capture...`)
-      await new Promise((resolve) => setTimeout(resolve, 1000))
+    await new Promise((r) => setTimeout(r, 300)) // 렌더링 대기
 
-      // 컨텐츠 캡처
-      const canvas = await html2canvas(contentElement, {
-        scale: 1.5,
-        useCORS: true,
-        logging: true,
-        backgroundColor: "rgb(31, 41, 55)",
-        allowTaint: true,
-        foreignObjectRendering: false,
-        onclone: (clonedDoc) => {
-          // 클론된 문서에서 차트 요소 스타일 추가 조정
-          const clonedCharts = clonedDoc.querySelectorAll(".recharts-wrapper")
-          clonedCharts.forEach((chart) => {
-            if (chart instanceof HTMLElement) {
-              chart.style.width = "100%"
-              chart.style.height = "auto"
-              chart.style.minHeight = "300px"
-              chart.style.display = "block"
-              chart.style.visibility = "visible"
-              chart.style.overflow = "visible"
-            }
-          })
-        },
-      })
+    const canvas = await html2canvas(element, {
+      scale: 2,
+      useCORS: true,
+      backgroundColor: "rgb(31, 41, 55)",
+      // windowHeight: element.scrollHeight, // 전체 높이 캡처 보장
+      // scrollY: 0,
+    })
 
-      // 이미지 크기 계산
-      const imgWidth = pdf.internal.pageSize.getWidth()
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
+    document.body.removeChild(container)
 
-      // PDF에 이미지 추가
-      if (imgHeight <= pdf.internal.pageSize.getHeight()) {
-        // 한 페이지에 들어가는 경우
-        pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgWidth, imgHeight)
-      } else {
-        // 여러 페이지에 나눠서 추가
-        let heightLeft = imgHeight
-        let position = 0
-        let isFirstPage = true
+    const imgData = canvas.toDataURL("image/jpeg", 1.0)
 
-        while (heightLeft > 0) {
-          if (!isFirstPage) {
-            pdf.addPage()
-            applyPageBackground(pdf) // 배경색 적용
-          }
+    // PDF 사이즈
+    const pdfPageWidth = pdf.internal.pageSize.getWidth()
 
-          pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, position, imgWidth, imgHeight)
+    // 캔버스 이미지 사이즈
+    const canvasImgWidth = canvas.width
+    const canvasImgHeight = canvas.height
 
-          heightLeft -= pdf.internal.pageSize.getHeight()
-          position -= pdf.internal.pageSize.getHeight()
-          isFirstPage = false
-        }
+    // PDF에 렌더링될 이미지의 너비 (좌우 마진 적용)
+    const renderWidthOnPdf = pdfPageWidth - 2 * PDF_CONTENT_PAGE_HORIZONTAL_MARGIN
+    // PDF에 렌더링될 이미지의 총 높이 (비율 유지)
+    // const totalRenderHeightOnPdf = (canvasImgHeight / canvasImgWidth) * renderWidthOnPdf
+
+    if (tabId === "multiple-choice") {
+      // "multiple-choice" 탭은 한 페이지에 강제로 맞춤 (비율 유지)
+      console.log(`Forcing single page for dynamic content: ${tabId}`)
+      const aspectRatio = canvasImgHeight / canvasImgWidth;
+      let finalRenderWidth = renderWidthOnPdf;
+      let finalRenderHeight = finalRenderWidth * aspectRatio;
+
+      if (finalRenderHeight > pageContentHeight) {
+        finalRenderHeight = pageContentHeight;
+        finalRenderWidth = finalRenderHeight / aspectRatio;
       }
-    } finally {
-      // 컨테이너 제거
-      document.body.removeChild(container)
+
+      // 중앙 정렬을 위해 x_offset 계산
+      const x_offset = PDF_CONTENT_PAGE_HORIZONTAL_MARGIN + (renderWidthOnPdf - finalRenderWidth) / 2;
+      const y_offset = PDF_CONTENT_PAGE_TOP_MARGIN; // 상단 마진만 적용
+
+      pdf.addImage(
+        imgData,
+        "JPEG",
+        x_offset,
+        y_offset,
+        finalRenderWidth,
+        finalRenderHeight
+      );
+    } else {
+      // 다른 탭들은 기존 페이징 로직 사용
+      const totalRenderHeightOnPdf = (canvasImgHeight / canvasImgWidth) * renderWidthOnPdf
+      let canvasYSrc = 0 // 원본 캔버스에서 잘라낼 시작 Y 위치 (픽셀 단위)
+      let remainingCanvasHeightToProcess = canvasImgHeight // 처리해야 할 원본 캔버스 높이 (픽셀 단위)
+      let isFirstPageOfThisDynamicContent = true
+
+      while (remainingCanvasHeightToProcess > 0) {
+        if (!isFirstPageOfThisDynamicContent) {
+          pdf.addPage()
+          applyPageBackground(pdf)
+          drawHeaderFooter(pdf, logoDetails)
+        }
+
+        const canvasHeightForThisPage = pageContentHeight * (canvasImgHeight / totalRenderHeightOnPdf)
+        const currentCanvasSliceHeight = Math.min(remainingCanvasHeightToProcess, canvasHeightForThisPage)
+
+        const segmentCanvas = document.createElement("canvas")
+        const segmentCtx = segmentCanvas.getContext("2d")
+        if (!segmentCtx) {
+          console.error("임시 캔버스 컨텍스트를 가져올 수 없습니다.")
+          return
+        }
+
+        segmentCanvas.width = canvasImgWidth
+        segmentCanvas.height = currentCanvasSliceHeight
+
+        segmentCtx.drawImage(
+          canvas, 0, canvasYSrc, canvasImgWidth, currentCanvasSliceHeight,
+          0, 0, canvasImgWidth, currentCanvasSliceHeight
+        )
+
+        const segmentImgData = segmentCanvas.toDataURL("image/jpeg", 1.0)
+        const segmentHeightOnPdf = currentCanvasSliceHeight * (totalRenderHeightOnPdf / canvasImgHeight)
+
+        pdf.addImage(
+          segmentImgData,
+          "JPEG",
+          PDF_CONTENT_PAGE_HORIZONTAL_MARGIN,
+          PDF_CONTENT_PAGE_TOP_MARGIN,
+          renderWidthOnPdf,
+          segmentHeightOnPdf,
+        )
+
+        remainingCanvasHeightToProcess -= currentCanvasSliceHeight
+        canvasYSrc += currentCanvasSliceHeight
+        isFirstPageOfThisDynamicContent = false
+      }
     }
   }
 
   // 정적 탭 내용 생성 (fallback)
-  const generateStaticTabContent = async (pdf: jsPDF, tabId: string, title: string) => {
+  const generateStaticTabContent = async (
+    pdf: jsPDF,
+    tabId: string,
+    title: string,
+    logoDetails: { dataUrl: string, width: number, height: number } | null,
+  ) => {
+    const pageContentHeight =
+      pdf.internal.pageSize.getHeight() - PDF_CONTENT_PAGE_TOP_MARGIN - PDF_CONTENT_PAGE_BOTTOM_MARGIN
+
     // 정적 컨텐츠 컴포넌트 생성
     const contentDiv = document.createElement("div")
-    contentDiv.style.width = `${pdf.internal.pageSize.getWidth() * 3.779527559}px`
+    contentDiv.style.width = `${pdf.internal.pageSize.getWidth() * 3.779527559}px` // A4 width in pixels
     contentDiv.style.background = "rgb(31, 41, 55)"
     contentDiv.style.padding = "20px"
     contentDiv.style.color = "white"
@@ -434,43 +675,102 @@ export default function PdfExportButton() {
 
     try {
       // 컨텐츠 캡처
-      const canvas = await html2canvas(contentDiv, {
-        scale: 1.5,
+      const fullStaticCanvas = await html2canvas(contentDiv, {
+        scale: 2, // captureAndAddToPDF와 일관성 유지
         useCORS: true,
         logging: false,
         backgroundColor: "rgb(31, 41, 55)",
+        // windowHeight: contentDiv.scrollHeight, // 전체 높이 캡처
       })
+      document.body.removeChild(contentDiv) // 사용 후 즉시 제거
 
-      // 이미지 크기 계산
-      const imgWidth = pdf.internal.pageSize.getWidth()
-      const imgHeight = (canvas.height * imgWidth) / canvas.width
+      const canvasImgWidth = fullStaticCanvas.width
+      const canvasImgHeight = fullStaticCanvas.height
 
-      // PDF에 이미지 추가
-      if (imgHeight <= pdf.internal.pageSize.getHeight()) {
-        // 한 페이지에 들어가는 경우
-        pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, 0, imgWidth, imgHeight)
+      const pdfPageWidth = pdf.internal.pageSize.getWidth()
+      const renderWidthOnPdf = pdfPageWidth - 2 * PDF_CONTENT_PAGE_HORIZONTAL_MARGIN
+      // const totalRenderHeightOnPdf = (canvasImgHeight / canvasImgWidth) * renderWidthOnPdf
+
+      if (tabId === "multiple-choice") {
+        // "multiple-choice" 탭은 한 페이지에 강제로 맞춤 (비율 유지)
+        console.log(`Forcing single page for static content: ${tabId}`)
+        const aspectRatio = canvasImgHeight / canvasImgWidth;
+        let finalRenderWidth = renderWidthOnPdf;
+        let finalRenderHeight = finalRenderWidth * aspectRatio;
+
+        if (finalRenderHeight > pageContentHeight) {
+          finalRenderHeight = pageContentHeight;
+          finalRenderWidth = finalRenderHeight / aspectRatio;
+        }
+
+        const x_offset = PDF_CONTENT_PAGE_HORIZONTAL_MARGIN + (renderWidthOnPdf - finalRenderWidth) / 2;
+        const y_offset = PDF_CONTENT_PAGE_TOP_MARGIN;
+
+        pdf.addImage(
+          fullStaticCanvas.toDataURL("image/jpeg", 0.95), // 전체 캔버스 사용
+          "JPEG",
+          x_offset,
+          y_offset,
+          finalRenderWidth,
+          finalRenderHeight
+        );
       } else {
-        // 여러 페이지에 나눠서 추가
-        let heightLeft = imgHeight
-        let position = 0
-        let isFirstPage = true
+        // 다른 탭들은 기존 페이징 로직 사용
+        const totalRenderHeightOnPdf = (canvasImgHeight / canvasImgWidth) * renderWidthOnPdf
+        let canvasYSrc = 0
+        let remainingCanvasHeightToProcess = canvasImgHeight
+        let isFirstPageOfThisStaticContent = true
 
-        while (heightLeft > 0) {
-          if (!isFirstPage) {
+        while (remainingCanvasHeightToProcess > 0) {
+          if (!isFirstPageOfThisStaticContent) {
             pdf.addPage()
-            applyPageBackground(pdf) // 배경색 적용
+            applyPageBackground(pdf)
+            drawHeaderFooter(pdf, logoDetails)
           }
 
-          pdf.addImage(canvas.toDataURL("image/jpeg", 0.95), "JPEG", 0, position, imgWidth, imgHeight)
+          const canvasHeightForThisPage = pageContentHeight * (canvasImgHeight / totalRenderHeightOnPdf)
+          const currentCanvasSliceHeight = Math.min(remainingCanvasHeightToProcess, canvasHeightForThisPage)
 
-          heightLeft -= pdf.internal.pageSize.getHeight()
-          position -= pdf.internal.pageSize.getHeight()
-          isFirstPage = false
+          const segmentCanvas = document.createElement("canvas")
+          const segmentCtx = segmentCanvas.getContext("2d")
+          if (!segmentCtx) {
+            console.error("정적 콘텐츠용 임시 캔버스 컨텍스트를 가져올 수 없습니다.")
+            return
+          }
+
+          segmentCanvas.width = canvasImgWidth
+          segmentCanvas.height = currentCanvasSliceHeight
+
+          segmentCtx.drawImage(
+            fullStaticCanvas, 0, canvasYSrc, canvasImgWidth, currentCanvasSliceHeight,
+            0, 0, canvasImgWidth, currentCanvasSliceHeight
+          )
+
+          const segmentImgData = segmentCanvas.toDataURL("image/jpeg", 0.95)
+          const segmentHeightOnPdf = currentCanvasSliceHeight * (totalRenderHeightOnPdf / canvasImgHeight)
+
+          pdf.addImage(
+            segmentImgData, "JPEG",
+            PDF_CONTENT_PAGE_HORIZONTAL_MARGIN, PDF_CONTENT_PAGE_TOP_MARGIN,
+            renderWidthOnPdf, segmentHeightOnPdf
+          )
+
+          remainingCanvasHeightToProcess -= currentCanvasSliceHeight
+          canvasYSrc += currentCanvasSliceHeight
+          isFirstPageOfThisStaticContent = false
         }
       }
+    } catch (error) {
+      console.error("정적 탭 콘텐츠 생성 중 오류:", error)
+      // DOM에 남아있을 수 있는 contentDiv 제거
+      if (document.body.contains(contentDiv)) {
+        document.body.removeChild(contentDiv)
+      }
     } finally {
-      // 컨테이너 제거
-      document.body.removeChild(contentDiv)
+      // ensure cleanup, though it should be done in try or catch
+      if (document.body.contains(contentDiv)) {
+        document.body.removeChild(contentDiv)
+      }
     }
   }
 
@@ -480,10 +780,11 @@ export default function PdfExportButton() {
       case "overview":
         return `
           <div style="padding: 20px;">
-            <h2 style="font-size: 24px; margin-bottom: 20px;">${title}</h2>
-            <p style="margin-bottom: 15px;">총 응답자 수: <strong>80명</strong> | 설문 문항 수: 객관식 12문항 + 주관식 8문항</p>
+            <h2 style="font-size: 24px; margin-bottom: 8px;">${title}</h2>
+            <p style="margin-bottom: 12px;">총 응답자 수: <strong>80명</strong> | 설문 문항 수: 객관식 12문항 + 주관식 8문항</p>
+            <hr style="border: none; border-top: 0.5px solid white; margin-top: 16px; margin-bottom: 20px;">
             
-            <div style="margin-top: 30px;">
+            <div style="margin-top: 0;">
               <h3 style="font-size: 18px; margin-bottom: 10px;">성별 분포</h3>
               <p>남자: 61% (49명), 여자: 39% (31명)</p>
             </div>
@@ -492,7 +793,6 @@ export default function PdfExportButton() {
               <h3 style="font-size: 18px; margin-bottom: 10px;">연령대 분포</h3>
               <p>30대: 44% (35명), 20대: 43% (34명), 40대 이상: 9% (7명), 10대: 5% (4명)</p>
             </div>
-            
             <div style="margin-top: 20px;">
               <h3 style="font-size: 18px; margin-bottom: 10px;">게임 장르 선호도</h3>
               <p>매우 선호한다: 30% (24명), 선호한다: 54% (43명), 선호하지 않는다: 16% (13명)</p>
@@ -508,29 +808,33 @@ export default function PdfExportButton() {
       case "multiple-choice":
         return `
           <div style="padding: 20px;">
-            <h2 style="font-size: 24px; margin-bottom: 20px;">${title}</h2>
-            <p style="margin-bottom: 15px;">총 응답자: 80명</p>
+            <h2 style="font-size: 24px; margin-bottom: 8px;">${title}</h2>
+            <p style="margin-bottom: 12px;">총 응답자: 80명</p>
+            <hr style="border: none; border-top: 0.5px solid white; margin-top: 16px; margin-bottom: 20px;">
             
-            <div style="margin-top: 30px;">
-              <h3 style="font-size: 18px; margin-bottom: 10px;">별점 분포</h3>
-              <p>5점: 24% (19명), 4점: 50% (40명), 3점: 19% (15명), 2점: 7% (6명)</p>
-            </div>
-            
-            <div style="margin-top: 20px;">
-              <h3 style="font-size: 18px; margin-bottom: 10px;">지속적 플레이·지인 추천 의향</h3>
-              <p>매우 긍정: 24% (19명), 긍정: 56% (45명), 부정: 19% (15명), 매우 부정: 1% (1명)</p>
-            </div>
-            
-            <div style="margin-top: 20px;">
-              <h3 style="font-size: 18px; margin-bottom: 10px;">콘텐츠 만족도</h3>
-              <ul style="list-style-type: disc; padding-left: 20px;">
-                <li style="margin-bottom: 5px;">튜토리얼: 매우만족 19명, 만족 46명, 불만족 15명, 매우불만족 0명</li>
-                <li style="margin-bottom: 5px;">그래픽: 매우만족 40명, 만족 35명, 불만족 5명, 매우불만족 0명</li>
-                <li style="margin-bottom: 5px;">밸런스: 매우만족 9명, 만족 34명, 불만족 30명, 매우불만족 7명</li>
-                <li style="margin-bottom: 5px;">조작감/UI: 매우만족 23명, 만족 33명, 불만족 21명, 매우불만족 3명</li>
-                <li style="margin-bottom: 5px;">스토리/연출: 매우만족 38명, 만족 30명, 불만족 11명, 매우불만족 1명</li>
-                <li style="margin-bottom: 5px;">오브젝트 밀도: 매우만족 4명, 만족 29명, 불만족 35명, 매우불만족 12명</li>
-              </ul>
+            <!-- 정적 콘텐츠의 경우, 이 div에 scale을 적용하는 것이 html2canvas 캡처 전에 크기를 줄여줍니다. -->
+            <div style="transform: scale(0.92); transform-origin: top left;"> 
+              <div style="margin-top: 0;">
+                <h3 style="font-size: 18px; margin-bottom: 10px;">별점 분포</h3>
+                <p>5점: 24% (19명), 4점: 50% (40명), 3점: 19% (15명), 2점: 7% (6명)</p>
+              </div>
+              
+              <div style="margin-top: 20px;">
+                <h3 style="font-size: 18px; margin-bottom: 10px;">지속적 플레이·지인 추천 의향</h3>
+                <p>매우 긍정: 24% (19명), 긍정: 56% (45명), 부정: 19% (15명), 매우 부정: 1% (1명)</p>
+              </div>
+              
+              <div style="margin-top: 20px;">
+                <h3 style="font-size: 18px; margin-bottom: 10px;">콘텐츠 만족도</h3>
+                <ul style="list-style-type: disc; padding-left: 20px;">
+                  <li style="margin-bottom: 5px;">튜토리얼: 매우만족 19명, 만족 46명, 불만족 15명, 매우불만족 0명</li>
+                  <li style="margin-bottom: 5px;">그래픽: 매우만족 40명, 만족 35명, 불만족 5명, 매우불만족 0명</li>
+                  <li style="margin-bottom: 5px;">밸런스: 매우만족 9명, 만족 34명, 불만족 30명, 매우불만족 7명</li>
+                  <li style="margin-bottom: 5px;">조작감/UI: 매우만족 23명, 만족 33명, 불만족 21명, 매우불만족 3명</li>
+                  <li style="margin-bottom: 5px;">스토리/연출: 매우만족 38명, 만족 30명, 불만족 11명, 매우불만족 1명</li>
+                  <li style="margin-bottom: 5px;">오브젝트 밀도: 매우만족 4명, 만족 29명, 불만족 35명, 매우불만족 12명</li>
+                </ul>
+              </div>
             </div>
           </div>
         `
@@ -538,9 +842,10 @@ export default function PdfExportButton() {
       case "open-ended":
         return `
           <div style="padding: 20px;">
-            <h2 style="font-size: 24px; margin-bottom: 20px;">${title}</h2>
+            <h2 style="font-size: 24px; margin-bottom: 12px;">${title}</h2>
+            <hr style="border: none; border-top: 0.5px solid white; margin-top: 16px; margin-bottom: 20px;">
             
-            <div style="margin-top: 20px;">
+            <div style="margin-top: 0;">
               <h3 style="font-size: 18px; margin-bottom: 10px;">📌 워드클라우드 분석</h3>
               <p style="margin-bottom: 10px;">각 문항별 주요 키워드는 다음과 같습니다:</p>
               
@@ -579,9 +884,10 @@ export default function PdfExportButton() {
       case "sentiment":
         return `
           <div style="padding: 20px;">
-            <h2 style="font-size: 24px; margin-bottom: 20px;">${title}</h2>
+            <h2 style="font-size: 24px; margin-bottom: 12px;">${title}</h2>
+            <hr style="border: none; border-top: 0.5px solid white; margin-top: 16px; margin-bottom: 20px;">
             
-            <div style="margin-top: 20px;">
+            <div style="margin-top: 0;">
               <h3 style="font-size: 18px; margin-bottom: 10px;">문항별 감성 분류 결과</h3>
               <ul style="list-style-type: disc; padding-left: 20px;">
                 <li style="margin-bottom: 5px;">튜토리얼 만족도: 긍정 21명, 부정 5명, 혼합 2명, 중립 11명</li>
@@ -607,9 +913,10 @@ export default function PdfExportButton() {
       case "bugs":
         return `
           <div style="padding: 20px;">
-            <h2 style="font-size: 24px; margin-bottom: 20px;">${title}</h2>
+            <h2 style="font-size: 24px; margin-bottom: 12px;">${title}</h2>
+            <hr style="border: none; border-top: 0.5px solid white; margin-top: 16px; margin-bottom: 20px;">
             
-            <div style="margin-top: 20px;">
+            <div style="margin-top: 0;">
               <h3 style="font-size: 18px; margin-bottom: 10px;">버그 유형별 요약</h3>
               <table style="width: 100%; border-collapse: collapse; margin-top: 10px;">
                 <tr style="border-bottom: 1px solid #555;">
@@ -661,9 +968,10 @@ export default function PdfExportButton() {
       case "cross-analysis":
         return `
           <div style="padding: 20px;">
-            <h2 style="font-size: 24px; margin-bottom: 20px;">${title}</h2>
+            <h2 style="font-size: 24px; margin-bottom: 12px;">${title}</h2>
+            <hr style="border: none; border-top: 0.5px solid white; margin-top: 16px; margin-bottom: 20px;">
             
-            <div style="margin-top: 20px;">
+            <div style="margin-top: 0;">
               <h3 style="font-size: 18px; margin-bottom: 10px;">성별 × 장르 선호도 만족도</h3>
               <ul style="list-style-type: disc; padding-left: 20px;">
                 <li style="margin-bottom: 5px;">매우 선호한다: 남자 4.64점, 여자 4.7점</li>
@@ -708,9 +1016,10 @@ export default function PdfExportButton() {
       case "insights":
         return `
           <div style="padding: 20px;">
-            <h2 style="font-size: 24px; margin-bottom: 20px;">${title}</h2>
+            <h2 style="font-size: 24px; margin-bottom: 12px;">${title}</h2>
+            <hr style="border: none; border-top: 0.5px solid white; margin-top: 16px; margin-bottom: 20px;">
             
-            <div style="margin-top: 20px;">
+            <div style="margin-top: 0;">
               <h3 style="font-size: 18px; margin-bottom: 10px;">감성 분석 요약 (Sentiment Analysis)</h3>
               <ul style="list-style-type: disc; padding-left: 20px;">
                 <li style="margin-bottom: 8px;"><strong>긍정 응답 다수:</strong> 게임의 콘셉트, 캐릭터, 그래픽, 추리 요소에 대해 전반적으로 긍정적 의견이 많았음</li>
@@ -759,8 +1068,9 @@ export default function PdfExportButton() {
       default:
         return `
           <div style="padding: 20px;">
-            <h2 style="font-size: 24px; margin-bottom: 20px;">${title}</h2>
-            <p>이 섹션에 대한 내용을 불러올 수 없습니다.</p>
+            <h2 style="font-size: 24px; margin-bottom: 12px;">${title}</h2>
+            <hr style="border: none; border-top: 0.5px solid white; margin-top: 16px; margin-bottom: 20px;">
+            <p style="margin-top: 0;">이 섹션에 대한 내용을 불러올 수 없습니다.</p>
           </div>
         `
     }
