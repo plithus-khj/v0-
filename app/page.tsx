@@ -26,12 +26,13 @@ export default function Home() {
     <main className="min-h-screen bg-gray-900 text-white">
       {/* 상단 네비게이션 바 */}
       <nav className="bg-gray-900 border-b border-gray-800 py-4">
-        <div className="max-w-7xl mx-auto px-4 flex justify-between items-center">
-          <div>
+        <div className="max-w-7xl mx-auto px-4 relative">
+          <div className="flex justify-start">
             <Image src="/white-logo.svg" alt="Plithus" width={100} height={29} />
           </div>
-          <div className="text-2xl font-medium font-bold">아르뷔엔의 겨울 테스트 개요</div>
-          {/* PDF 버튼 제거됨 */}
+          <div className="absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 text-2xl font-medium font-bold">
+            아르뷔엔의 겨울 테스트 개요
+          </div>
         </div>
       </nav>
 
