@@ -190,6 +190,37 @@ export default function CrossAnalysis() {
     <div className="space-y-6 tab-content-cross-analysis">
       <h2 className="text-2xl font-bold">교차분석 정리 (시각화)</h2>
 
+      {/* 주요 교차분석 인사이트 섹션 */}
+      <Card className="bg-gray-800 border-0">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-lg text-white">주요 교차분석 인사이트</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <ul className="list-disc list-inside space-y-3 text-gray-300">
+            <li>
+              <span className="text-white font-medium">연령대별 만족도 차이:</span> 10대의 만족도(4.5점)가 가장 높고,
+              연령대가 높아질수록 만족도가 낮아지는 경향이 있음 (40대 이상: 3.29점)
+            </li>
+            <li>
+              <span className="text-white font-medium">장르 선호도와 만족도 상관관계:</span> 장르를 '매우 선호한다'고
+              응답한 유저의 만족도가 전반적으로 높게 나타남 (남성: 4.64점, 여성: 4.7점)
+            </li>
+            <li>
+              <span className="text-white font-medium">플레이타임과 만족도:</span> 플레이타임이 길수록 만족도가 높아지는
+              경향이 있으며, 특히 21-30분 구간에서 장르 선호도가 높은 유저들의 만족도가 5.0점으로 최고치
+            </li>
+            <li>
+              <span className="text-white font-medium">성별 차이:</span> 여성은 튜토리얼 만족도(4.0)가 남성(3.78)보다
+              높은 반면, 남성은 조작감 만족도(3.73)가 여성(3.52)보다 높음
+            </li>
+            <li>
+              <span className="text-white font-medium">감성 태그 분석:</span> 전 연령대와 성별에서 긍정적 감성이
+              압도적으로 많으며, 특히 30대 남성(24건)과 20대 여성(17건)에서 긍정 응답이 가장 많음
+            </li>
+          </ul>
+        </CardContent>
+      </Card>
+
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* 성별 × 장르 선호도 만족도 */}
         <Card className="bg-gray-800 border-0">
@@ -626,37 +657,6 @@ export default function CrossAnalysis() {
           </CardContent>
         </Card>
       </div>
-
-      {/* 추가 인사이트 섹션 */}
-      <Card className="bg-gray-800 border-0">
-        <CardHeader className="pb-2">
-          <CardTitle className="text-lg text-white">주요 교차분석 인사이트</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <ul className="list-disc list-inside space-y-3 text-gray-300">
-            <li>
-              <span className="text-white font-medium">연령대별 만족도 차이:</span> 10대의 만족도(4.5점)가 가장 높고,
-              연령대가 높아질수록 만족도가 낮아지는 경향이 있음 (40대 이상: 3.29점)
-            </li>
-            <li>
-              <span className="text-white font-medium">장르 선호도와 만족도 상관관계:</span> 장르를 '매우 선호한다'고
-              응답한 유저의 만족도가 전반적으로 높게 나타남 (남성: 4.64점, 여성: 4.7점)
-            </li>
-            <li>
-              <span className="text-white font-medium">플레이타임과 만족도:</span> 플레이타임이 길수록 만족도가 높아지는
-              경향이 있으며, 특히 21-30분 구간에서 장르 선호도가 높은 유저들의 만족도가 5.0점으로 최고치
-            </li>
-            <li>
-              <span className="text-white font-medium">성별 차이:</span> 여성은 튜토리얼 만족도(4.0)가 남성(3.78)보다
-              높은 반면, 남성은 조작감 만족도(3.73)가 여성(3.52)보다 높음
-            </li>
-            <li>
-              <span className="text-white font-medium">감성 태그 분석:</span> 전 연령대와 성별에서 긍정적 감성이
-              압도적으로 많으며, 특히 30대 남성(24건)과 20대 여성(17건)에서 긍정 응답이 가장 많음
-            </li>
-          </ul>
-        </CardContent>
-      </Card>
     </div>
   )
 }
