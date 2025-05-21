@@ -10,7 +10,6 @@ import BugReports from "@/components/bug-reports"
 import CrossAnalysis from "@/components/cross-analysis"
 import AdditionalInsights from "@/components/additional-insights"
 import FeedbackViewer from "@/components/feedback-viewer"
-import PdfExportButton from "@/components/pdf-export-button"
 import OffscreenTabsRenderer from "@/components/offscreen-tabs-renderer"
 import Image from "next/image"
 import { Monitor } from "lucide-react"
@@ -32,7 +31,7 @@ export default function Home() {
             <Image src="/white-logo.svg" alt="Plithus" width={100} height={29} />
           </div>
           <div className="text-2xl font-medium font-bold">아르뷔엔의 겨울 테스트 개요</div>
-          <PdfExportButton />
+          {/* PDF 버튼 제거됨 */}
         </div>
       </nav>
 
