@@ -108,7 +108,7 @@ export default function Home() {
               <TabsList className="flex-col h-auto bg-transparent space-y-2 w-full overflow-y-auto max-h-[calc(100vh-200px)]">
                 <TabsTrigger
                   value="overview"
-                  className="w-full justify-start tab-trigger-overview"
+                  className="w-full justify-start tab-trigger-overview text-gray-400 data-[state=active]:text-white"
                   data-active={activeTab === "overview"}
                   id="tab-overview"
                 >
@@ -116,7 +116,7 @@ export default function Home() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="multiple-choice"
-                  className="w-full justify-start tab-trigger-multiple-choice"
+                  className="w-full justify-start tab-trigger-multiple-choice text-gray-400 data-[state=active]:text-white"
                   data-active={activeTab === "multiple-choice"}
                   id="tab-multiple-choice"
                 >
@@ -124,7 +124,7 @@ export default function Home() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="open-ended"
-                  className="w-full justify-start tab-trigger-open-ended"
+                  className="w-full justify-start tab-trigger-open-ended text-gray-400 data-[state=active]:text-white"
                   data-active={activeTab === "open-ended"}
                   id="tab-open-ended"
                 >
@@ -132,7 +132,7 @@ export default function Home() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="sentiment"
-                  className="w-full justify-start tab-trigger-sentiment"
+                  className="w-full justify-start tab-trigger-sentiment text-gray-400 data-[state=active]:text-white"
                   data-active={activeTab === "sentiment"}
                   id="tab-sentiment"
                 >
@@ -140,7 +140,7 @@ export default function Home() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="bugs"
-                  className="w-full justify-start tab-trigger-bugs"
+                  className="w-full justify-start tab-trigger-bugs text-gray-400 data-[state=active]:text-white"
                   data-active={activeTab === "bugs"}
                   id="tab-bugs"
                 >
@@ -148,7 +148,7 @@ export default function Home() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="cross-analysis"
-                  className="w-full justify-start tab-trigger-cross-analysis"
+                  className="w-full justify-start tab-trigger-cross-analysis text-gray-400 data-[state=active]:text-white"
                   data-active={activeTab === "cross-analysis"}
                   id="tab-cross-analysis"
                 >
@@ -156,7 +156,7 @@ export default function Home() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="insights"
-                  className="w-full justify-start tab-trigger-insights"
+                  className="w-full justify-start tab-trigger-insights text-gray-400 data-[state=active]:text-white"
                   data-active={activeTab === "insights"}
                   id="tab-insights"
                 >
@@ -164,7 +164,7 @@ export default function Home() {
                 </TabsTrigger>
                 <TabsTrigger
                   value="feedback-viewer"
-                  className="w-full justify-start tab-trigger-feedback-viewer"
+                  className="w-full justify-start tab-trigger-feedback-viewer text-gray-400 data-[state=active]:text-white"
                   data-active={activeTab === "feedback-viewer"}
                   id="tab-feedback-viewer"
                 >
