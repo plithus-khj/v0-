@@ -3,7 +3,7 @@ import type { Metadata } from "next"
 import "./globals.css"
 
 export const metadata: Metadata = {
-  title: "WINTER OF THE ARBYEN REPORT",
+  title: "WINTER OF THE ARBYEN Report",
   description: "Created with PLITHUS",
   generator: "PLITHUS",
 }
