@@ -191,42 +191,45 @@ export default function CrossAnalysis() {
       <h2 className="text-2xl font-bold">교차분석 정리 (시각화)</h2>
 
       {/* 주요 교차분석 인사이트 섹션 */}
-      <div className="bg-[#111827] rounded-lg p-6 mb-6">
-        <h3 className="text-white text-lg font-medium mb-4">교차분석 주요 인사이트</h3>
-        <ul className="space-y-3">
-          <li className="flex items-start">
-            <div className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-500 mt-1.5 mr-3"></div>
-            <span className="text-gray-200">
-              장르 선호도가 높을수록 별점이 높아지는 경향이 뚜렷함 - 매우 선호(4.64점) vs 매우 비선호(3.0점)
-            </span>
-          </li>
-          <li className="flex items-start">
-            <div className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-500 mt-1.5 mr-3"></div>
-            <span className="text-gray-200">
-              20대가 전반적으로 가장 높은 만족도를 보이며, 특히 20대 남성의 장르 선호도가 높은 그룹에서 최고
-              평점(4.88점) 기록
-            </span>
-          </li>
-          <li className="flex items-start">
-            <div className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-500 mt-1.5 mr-3"></div>
-            <span className="text-gray-200">
-              남성이 여성보다 밸런스 만족도가 높음 (4.2 vs 3.6) - 난이도 인식에 성별 차이 존재
-            </span>
-          </li>
-          <li className="flex items-start">
-            <div className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-500 mt-1.5 mr-3"></div>
-            <span className="text-gray-200">
-              10대의 밸런스 만족도가 현저히 낮음 (2.8점) - 난이도 조정 시 연령대별 체감 차이 고려 필요
-            </span>
-          </li>
-          <li className="flex items-start">
-            <div className="flex-shrink-0 w-4 h-4 rounded-full bg-blue-500 mt-1.5 mr-3"></div>
-            <span className="text-gray-200">
-              남성은 1-2시간 플레이 그룹에서 만족도 최고 (4.47점), 여성은 2-5시간 플레이 그룹에서 최고 만족도(4.53점)
-              기록
-            </span>
-          </li>
-        </ul>
+      <div className="mb-8 bg-[#1a1e2e] rounded-lg p-6">
+        <h3 className="text-xl font-bold mb-4">교차분석 주요 인사이트</h3>
+        <div className="space-y-4">
+          <div className="flex items-start">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 mt-1 mr-3 flex items-center justify-center"></div>
+            <p className="text-gray-300">
+              <span className="text-white font-medium">연령대별 만족도 차이:</span> 10대의 만족도(4.5점)가 가장 높고,
+              연령대가 높아질수록 만족도가 낮아지는 경향이 있음 (40대 이상: 3.29점)
+            </p>
+          </div>
+          <div className="flex items-start">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 mt-1 mr-3 flex items-center justify-center"></div>
+            <p className="text-gray-300">
+              <span className="text-white font-medium">장르 선호도와 만족도 상관관계:</span> 장르를 '매우 선호한다'고
+              응답한 유저의 만족도가 전반적으로 높게 나타남 (남성: 4.64점, 여성: 4.7점)
+            </p>
+          </div>
+          <div className="flex items-start">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 mt-1 mr-3 flex items-center justify-center"></div>
+            <p className="text-gray-300">
+              <span className="text-white font-medium">플레이타임과 만족도:</span> 플레이타임이 길수록 만족도가 높아지는
+              경향이 있으며, 특히 21-30분 구간에서 장르 선호도가 높은 유저들의 만족도가 5.0점으로 최고치
+            </p>
+          </div>
+          <div className="flex items-start">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 mt-1 mr-3 flex items-center justify-center"></div>
+            <p className="text-gray-300">
+              <span className="text-white font-medium">성별 차이:</span> 여성은 튜토리얼 만족도(4.0)가 남성(3.78)보다
+              높은 반면, 남성은 조작감 만족도(3.73)가 여성(3.52)보다 높음
+            </p>
+          </div>
+          <div className="flex items-start">
+            <div className="flex-shrink-0 w-5 h-5 rounded-full bg-blue-500 mt-1 mr-3 flex items-center justify-center"></div>
+            <p className="text-gray-300">
+              <span className="text-white font-medium">감성 태그 분석:</span> 전 연령대와 성별에서 긍정적 감성이
+              압도적으로 많으며, 특히 30대 남성(24건)과 20대 여성(17건)에서 긍정 응답이 가장 많음
+            </p>
+          </div>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
